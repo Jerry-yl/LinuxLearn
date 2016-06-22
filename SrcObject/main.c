@@ -1,42 +1,40 @@
-
 #include "stdio.h"
 #include "string.h"
 #include "errno.h"
+#include "time.h"
+#include "unistd.h"
 
 int main(int argc, char *argv[])
 {
-	int iLine = 0x12345678;
-	char acBuf[6] = {1,2,0,4,5,6};
-	char ca = 1;
-	char cb = 2;
-	char cc = 3;
-	char cd = 4;
-	int i = 0x12345678;
-	FILE *fp;
+	int iLine = 0;
+	char acBuf[1024];
+	FILE *fps;
+	FILE *fpd;
+	time_t t;
 
-//	if( argc < 2 )
-//	{
-//		printf("Usage: %s <file>.\n", argv);
-//		return (-1);
-//	}
+	if( argc < 2 )
+	{
+		printf("Usage: %s <file>.\n", argv[1]);
+		return (-1);
+	}
 
-//	fp = fopen(argv[1], "r");
-//	if( NULL == fp )
-//	{
-//		perror("file to open:");
-//		return (-1);
-//	}
+	fpd = fopen(argv[2], "w+");
+	if( NULL == fpd )
+	{
+		perror("Dest file to open:");
+		return (-1);
+	}
 
-//	while( fgets(acBuf, 1024, fp) != NULL)
-//	{
-//	//	if( acBuf[10])
-//		iLine++;
-//	}
+	while( 1 )
+	{
+		time(&t);
+		fprintf(fpd, "%s\n", ctime(&t));
+//		fseek(fpd, 0, SEEK_CUR);
+//		sleep(1);
+		printf("%s\n",ctime(&t));
+	}
 
-	printf("The array length is:%d.\n", strlen(acBuf));
-	acBuf[strlen(acBuf)-1] = 8;
-
-	printf("The file line is:%d.\n", acBuf[5]);
+	fclose(fpd);
 	
 	return 0;
 }

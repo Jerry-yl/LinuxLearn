@@ -3,16 +3,14 @@
 #include "errno.h"
 #include "time.h"
 #include "unistd.h"
+#include "sys/stat.h"
+#include "fcntl.h"
 
 int main(int argc, char *argv[])
 {
-	int iGetResult = 0;
-	char *cp,tmp;
 	char acBuf[1024];
-	FILE *fps;
-	FILE *fpd;
-	time_t t;
-	cp = &tmp;
+	int iReadCount = 0;
+	int fds, fdp;
 	
 	if( argc < 2 )
 	{
@@ -20,42 +18,46 @@ int main(int argc, char *argv[])
 		return (-1);
 	}
 
-	fps = fopen(argv[1], "r");
-	if( NULL == fps )
+	fds = open(argv[1], O_RDONLY, 0666);
+	if( fds < 0)
 	{
-		perror("fps file to open:");
+		perror("fds file to open");
 		return(-1);
 	}
-
-	fpd = fopen(argv[2], "w+");
-	if( NULL == fpd )
+	fdp = open(argv[2], O_WRONLY|O_TRUNC, 0666);
+	if( fdp < 0 )
 	{
-		perror("Dest file to open:");
-		fclose(fps);
+		perror("Dest file to open");
+		close(fds);
 		return (-1);
 	}
 
+	if( lseek(fds, -10240, SEEK_END) < 0)//跳转到距离文件末尾10KB字节处
+	{
+		perror("lseek is error");
+		close(fds);
+		close(fdp);
+		return(-1);
+	}
+	
 	while( 1 )
 	{
-//		time(&t);
-//		fprintf(fpd, "%s\n", ctime(&t));
-		cp = fgets(acBuf, sizeof(acBuf), fps);
-		if( NULL == cp )
+		iReadCount = read(fds, acBuf, 1024);
+		if( iReadCount <= 0 )
 		{
-			perror("fgets is error");
+			perror("read is error");
 			break;
 		}
-//		fseek(fpd, 0, SEEK_CUR);
-		if( NULL == fputs(acBuf, fpd) )
+		if( write(fdp, acBuf, iReadCount) < 0)
 		{
-			perror("fputs is error");
+			perror("write is error");
 			break;
 		}
-		memset(acBuf, 0x00, sizeof(acBuf));
+		
 	}
 
-	fclose(fpd);
-	fclose(fps);
+	close(fds);
+	close(fdp);
 	
 	return 0;
 }

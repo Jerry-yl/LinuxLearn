@@ -2,42 +2,40 @@
 #include "stdio.h"
 #include "string.h"
 #include "errno.h"
+#include "stdlib.h"
+#include "typedefs.h"
+#include "sched.h"
+#include "signal.h"
+#include "unistd.h"
+
+#define FIBER_STACK 8192
+
+int32 a;
+void *stack;
+
+int32 do_something()
+{
+	printf("This is son,the pid is:%d, the a is:%d\n", getpid(), ++a);
+	free(stack);
+	exit(1);
+}
 
 int main(int argc, char *argv[])
 {
-	int iLine = 0x12345678;
-	char acBuf[6] = {1,2,0,4,5,6};
-	char ca = 1;
-	char cb = 2;
-	char cc = 3;
-	char cd = 4;
-	int i = 0x12345678;
-	FILE *fp;
+	void *stack;
 
-//	if( argc < 2 )
-//	{
-//		printf("Usage: %s <file>.\n", argv);
-//		return (-1);
-//	}
+	a = 1;
 
-//	fp = fopen(argv[1], "r");
-//	if( NULL == fp )
-//	{
-//		perror("file to open:");
-//		return (-1);
-//	}
+	stack = malloc(FIBER_STACK);
+	if( NULL == stack )
+	{
+		printf("the stack faild\n");
+	}
 
-//	while( fgets(acBuf, 1024, fp) != NULL)
-//	{
-//	//	if( acBuf[10])
-//		iLine++;
-//	}
-
-	printf("The array length is:%d.\n", strlen(acBuf));
-	acBuf[strlen(acBuf)-1] = 8;
-
-	printf("The file line is:%d.\n", acBuf[5]);
-	
+	printf("creating son thread!!!\n");
+	clone(do_something, (char *)stack + FIBER_STACK, CLONE_VM|CLONE_VFORK, 0);
+	printf("this is father,my pid is:%d,the a is:%d\n ", getpid(), a);
+		
 	return 0;
 }
 

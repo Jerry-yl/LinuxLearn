@@ -35,9 +35,11 @@ int main(int argc, char *argv[])
 	clone(do_something, (char *)stack + FIBER_STACK, CLONE_VM|CLONE_VFORK, 0);
 	printf("this is father,my pid is:%d,the a is:%d\n ", getpid(), a);
 
-	//²âÊÔdevelop·ÖÖ§Ê¹ÓÃ
+	//æµ‹è¯•developåˆ†æ”¯ä½¿ç”¨
 	printf("this is father,my pid is:%d,the a is:%d\n ", getpid(), a);
-	//²âÊÔgit pushÖ®Ç°£¬·şÎñÆ÷Óë±¾µØ²»Ò»Ñù
+	//æµ‹è¯•git pushä¹‹å‰ï¼ŒæœåŠ¡å™¨ä¸æœ¬åœ°ä¸ä¸€æ ·
+	
+	//æœåŠ¡å™¨ç›´æ¥æ›´æ–°äº†æ–‡ä»¶å†…å®¹
 		
 	return 0;
 }

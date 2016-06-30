@@ -34,6 +34,9 @@ int main(int argc, char *argv[])
 	printf("creating son thread!!!\n");
 	clone(do_something, (char *)stack + FIBER_STACK, CLONE_VM|CLONE_VFORK, 0);
 	printf("this is father,my pid is:%d,the a is:%d\n ", getpid(), a);
+
+	//测试develop分支使用
+	printf("this is father,my pid is:%d,the a is:%d\n ", getpid(), a);
 		
 	return 0;
 }

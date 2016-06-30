@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
 
 	//测试develop分支使用
 	printf("this is father,my pid is:%d,the a is:%d\n ", getpid(), a);
+	//测试git push之前，服务器与本地不一样
 		
 	return 0;
 }

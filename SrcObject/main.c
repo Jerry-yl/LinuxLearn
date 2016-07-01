@@ -1,48 +1,45 @@
 #include "stdio.h"
-#include "string.h"
-#include "errno.h"
 #include "stdlib.h"
-#include "typedefs.h"
-#include "sched.h"
-#include "signal.h"
+#include "wait.h"
 #include "unistd.h"
+#include "typedefs.h"
+#include "sys/types.h"
+#include "string.h"
 
-#define FIBER_STACK 8192
-
-int32 a;
-void *stack;
-
-int32 do_something()
+void end(void)
 {
-	printf("This is son,the pid is:%d, the a is:%d\n", getpid(), ++a);
-	free(stack);
-	exit(1);
+    exit(2);
 }
 
-int main(int argc, char *argv[])
+char acCmd[256];
+
+int main()
 {
-	void *stack;
-
-	a = 1;
-
-	stack = malloc(FIBER_STACK);
-	if( NULL == stack )
+	int32	i32CldRt = 0;
+	pid_t	pid;
+	int32 	i32Count;
+	printf(">");
+	fgets(acCmd, 256, stdin);
+	acCmd[strlen(acCmd)-1] = 0;
+	pid = fork();
+	if(pid < 0)
 	{
-		printf("the stack faild\n");
+		perror("fork is failed");
+		exit(1);
+	}
+	if(0 == pid)
+	{
+		printf("child process pid:%d\n",getpid());
+		execv(acCmd,NULL); 
+		//execv(acCmd, acCmd);
+		perror("child execlp error");
+		exit(1);
+	}else{
+		printf("father process pid:%d\n",getpid());
+		wait(NULL);
+		printf("Atfer wait().\n");
 	}
 
-	printf("creating son thread!!!\n");
-	clone(do_something, (char *)stack + FIBER_STACK, CLONE_VM|CLONE_VFORK, 0);
-	printf("this is father,my pid is:%d,the a is:%d\n ", getpid(), a);
-
-	//测试develop分支使用
-	printf("this is father,my pid is:%d,the a is:%d\n ", getpid(), a);
-	//测试git push之前，服务器与本地不一样
-	
-	//服务器直接更新了文件内容
-
-	//本地编码转换之后再push到服务器，本地的编码是GB18030,而服务器是UTF-8
-		
 	return 0;
 }
 

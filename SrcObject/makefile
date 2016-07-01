@@ -11,7 +11,7 @@ all:myTest
 
 myTest:$(OBJS)
 	@echo "-----link success------"
-	gcc $^ -o $@
+	gcc $^ -o $@ -lpthread
 
 %.o:%.c
 	gcc -c -g -Wall $< -o $@ -MD -MF $*.d -MP

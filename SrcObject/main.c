@@ -6,42 +6,70 @@
 #include "sched.h"
 #include "signal.h"
 #include "unistd.h"
-
-#define FIBER_STACK 8192
-
-int32 a;
-void *stack;
-
-int32 do_something()
-{
-	printf("This is son,the pid is:%d, the a is:%d\n", getpid(), ++a);
-	free(stack);
-	exit(1);
-}
+#include "sys/stat.h"
+#include "sys/wait.h"
+#include "fcntl.h"
 
 int main(int argc, char *argv[])
 {
-	void *stack;
+	pid_t pid;
+	int status,i;
+	FILE *fp;
+	char *buf = "This is a Daemon.\n";
 
-	a = 1;
-
-	stack = malloc(FIBER_STACK);
-	if( NULL == stack )
+	pid = fork();   // step one
+	if(pid < 0)
 	{
-		printf("the stack faild\n");
+		perror("fork error");
+		exit(1);
+	}else if( pid > 0 ){
+		printf("this is parent process, exit.\n");
+		exit(0);
 	}
 
-	printf("creating son thread!!!\n");
-	clone(do_something, (char *)stack + FIBER_STACK, CLONE_VM|CLONE_VFORK, 0);
-	printf("this is father,my pid is:%d,the a is:%d\n ", getpid(), a);
-
-	//测试develop分支使用
-	printf("this is father,my pid is:%d,the a is:%d\n ", getpid(), a);
-	//测试git push之前，服务器与本地不一样
+	printf("Front, PID:%d, GUID:%d.\n", getpid(), getpgrp());
 	
-	//服务器直接更新了文件内容
+	if( setsid() < 0 )  //step two
+	{
+		perror("setsid error");
+		exit(1);
+	}
 
-	//本地编码转换之后再push到服务器，本地的编码是GB18030,而服务器是UTF-8
+	printf("After, PID:%d, GUID:%d.\n", getpid(), getpgrp());
+
+	pid = fork();  //step three
+	if( pid < 0 )
+	{
+		perror("child fork error");
+		exit(1);
+	}else if(pid > 0){
+		printf("this is first child process, exit.\n");
+		exit(0);
+	}
+
+	for( i=0;i<getdtablesize();i++)   //step four
+	{
+		close(i);
+	}
+
+	chdir("/tmp");   //step five
+
+	umask(0);    //step six
+
+	signal(SIGCHLD, SIG_IGN);    //step seven
+
+	while(1)
+	{
+		fp = fopen("daemon.log", "a");
+		if(NULL == fp)
+		{
+			perror("fopen error");
+			exit(1);
+		}
+		fputs(buf,fp);
+		fclose(fp);
+		sleep(3);
+	}
 		
 	return 0;
 }

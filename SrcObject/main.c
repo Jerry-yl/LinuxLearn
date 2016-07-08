@@ -5,68 +5,97 @@
 #include "sys/stat.h"
 #include "sys/wait.h"
 #include "fcntl.h"
+#include "syslog.h"
+#include "time.h"
+#include "string.h"
 
 int main(int argc, char *argv[])
 {
 	pid_t pid;
-	int status,i;
+	int fd[2];
+	char acBuf[256];
 	FILE *fp;
-	char *buf = "This is a Daemon.\n";
+	
+	if(pipe(fd) < 0)
+	{
+		perror("pipe error");
+		exit(1);
+	}
 
-	pid = fork();   // step one
+	pid = fork();
 	if(pid < 0)
 	{
 		perror("fork error");
 		exit(1);
-	}else if( pid > 0 ){
-		printf("this is parent process, exit.\n");
-		exit(0);
 	}
 
-	printf("Front, PID:%d, GUID:%d.\n", getpid(), getpgrp());
-	
-	if( setsid() < 0 )  //step two
+	if(0 == pid)
 	{
-		perror("setsid error");
-		exit(1);
-	}
-
-	printf("After, PID:%d, GUID:%d.\n", getpid(), getpgrp());
-
-	pid = fork();  //step three
-	if( pid < 0 )
-	{
-		perror("child fork error");
-		exit(1);
-	}else if(pid > 0){
-		printf("this is first child process, exit.\n");
-		exit(0);
-	}
-
-	for( i=0;i<getdtablesize();i++)   //step four
-	{
-		close(i);
-	}
-
-	chdir("/tmp");   //step five
-
-	umask(0);    //step six
-
-	signal(SIGCHLD, SIG_IGN);    //step seven
-
-	while(1)
-	{
-		fp = fopen("daemon.log", "a");
+		close(fd[0]);//close read
+		fp = fopen("src.txt","r");
 		if(NULL == fp)
 		{
 			perror("fopen error");
 			exit(1);
 		}
-		fputs(buf,fp);
+		while(fgets(acBuf,sizeof(acBuf), fp) != NULL)
+		{
+			if(write(fd[1], acBuf, sizeof(acBuf)) < 0)
+			{
+				perror("write erro");
+				exit(1);
+			}
+		}
+		acBuf[0] = '\x04';//Specify the end flag
+		if(write(fd[1], acBuf, sizeof(acBuf)) < 0)
+		{
+			perror("end write erro");
+			exit(1);
+		}
+
+		close(fd[1]);
 		fclose(fp);
-		sleep(3);
-	}
+		exit(0);
+	}else{
+		close(fd[1]);//close write
 		
+		fp = fopen("des.txt", "w");
+		if(NULL == fp)
+		{
+			perror("fopen error");
+			exit(1);
+		}
+
+		if(read(fd[0], acBuf, sizeof(acBuf)) < 0)
+		{
+			perror("read error");
+			exit(1);
+		}
+		while('\x04' != acBuf[0])
+		{
+			if( fputs(acBuf, fp) == EOF )
+			{
+				perror("fputs error");
+				exit(1);
+			}
+			if(read(fd[0], acBuf, sizeof(acBuf)) < 0)
+			{
+				perror("read error");
+				exit(1);
+			}
+		}
+	
+		if( pid != wait(NULL) )
+		{
+			perror("wait error");
+			exit(1);
+		}
+
+		close(fd[0]);
+		fclose(fp);
+		printf("Copy Done!\n");
+	}
+	
 	return 0;
 }
 

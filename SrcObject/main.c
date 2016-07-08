@@ -8,92 +8,54 @@
 #include "syslog.h"
 #include "time.h"
 #include "string.h"
+#include "errno.h"
+
+void vSigHandler(int sig, siginfo_t *info, void *t)
+{
+	printf("Recv signal:%d\n",sig);
+	printf("Recv msg:%d\n",info->si_int);
+
+	return;
+}
 
 int main(int argc, char *argv[])
 {
+	int status;
 	pid_t pid;
-	int fd[2];
-	char acBuf[256];
-	FILE *fp;
-	
-	if(pipe(fd) < 0)
+
+	struct sigaction act;
+	union sigval sig;
+	pid = getpid();
+
+	//Recv signal process
+//	act.sa_sigaction = vSigHandler;
+//	sigemptyset(&act.sa_mask);
+//	act.sa_flags = SA_SIGINFO;
+//	status = sigaction(SIGUSR1, &act, NULL);
+//	if( status < 0 )
+//	{
+//		perror("sigaction error");
+//		exit(1);
+//	}
+//	printf("Recv:\n");
+//	printf("PID:%d\n",pid);
+//	while(1);
+
+	//Send signal process,Select one of the compile-time
+	if( argc < 2 )
 	{
-		perror("pipe error");
+		printf("paramter is less");
 		exit(1);
 	}
-
-	pid = fork();
-	if(pid < 0)
+	pid = atoi(argv[1]);
+	sig.sival_int = getpid();
+	status = sigqueue(pid, SIGUSR1, sig);
+	if(status < 0)
 	{
-		perror("fork error");
+		perror("sigqueue error");
 		exit(1);
-	}
-
-	if(0 == pid)
-	{
-		close(fd[0]);//close read
-		fp = fopen("src.txt","r");
-		if(NULL == fp)
-		{
-			perror("fopen error");
-			exit(1);
-		}
-		while(fgets(acBuf,sizeof(acBuf), fp) != NULL)
-		{
-			if(write(fd[1], acBuf, sizeof(acBuf)) < 0)
-			{
-				perror("write erro");
-				exit(1);
-			}
-		}
-		acBuf[0] = '\x04';//Specify the end flag
-		if(write(fd[1], acBuf, sizeof(acBuf)) < 0)
-		{
-			perror("end write erro");
-			exit(1);
-		}
-
-		close(fd[1]);
-		fclose(fp);
-		exit(0);
 	}else{
-		close(fd[1]);//close write
-		
-		fp = fopen("des.txt", "w");
-		if(NULL == fp)
-		{
-			perror("fopen error");
-			exit(1);
-		}
-
-		if(read(fd[0], acBuf, sizeof(acBuf)) < 0)
-		{
-			perror("read error");
-			exit(1);
-		}
-		while('\x04' != acBuf[0])
-		{
-			if( fputs(acBuf, fp) == EOF )
-			{
-				perror("fputs error");
-				exit(1);
-			}
-			if(read(fd[0], acBuf, sizeof(acBuf)) < 0)
-			{
-				perror("read error");
-				exit(1);
-			}
-		}
-	
-		if( pid != wait(NULL) )
-		{
-			perror("wait error");
-			exit(1);
-		}
-
-		close(fd[0]);
-		fclose(fp);
-		printf("Copy Done!\n");
+		printf("Send Done\n");
 	}
 	
 	return 0;

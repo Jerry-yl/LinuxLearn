@@ -24,7 +24,10 @@ main.o: main.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/sys/stat.h /usr/include/bits/stat.h /usr/include/fcntl.h \
  /usr/include/bits/fcntl.h /usr/include/syslog.h \
  /usr/include/sys/syslog.h /usr/include/bits/syslog-path.h \
- /usr/include/xlocale.h /usr/include/string.h
+ /usr/include/xlocale.h /usr/include/string.h /usr/include/errno.h \
+ /usr/include/bits/errno.h /usr/include/linux/errno.h \
+ /usr/include/asm/errno.h /usr/include/asm-generic/errno.h \
+ /usr/include/asm-generic/errno-base.h
 
 /usr/include/stdio.h:
 
@@ -135,3 +138,15 @@ main.o: main.c /usr/include/stdio.h /usr/include/features.h \
 /usr/include/xlocale.h:
 
 /usr/include/string.h:
+
+/usr/include/errno.h:
+
+/usr/include/bits/errno.h:
+
+/usr/include/linux/errno.h:
+
+/usr/include/asm/errno.h:
+
+/usr/include/asm-generic/errno.h:
+
+/usr/include/asm-generic/errno-base.h:

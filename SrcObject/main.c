@@ -9,55 +9,84 @@
 #include "time.h"
 #include "string.h"
 #include "errno.h"
+#include "sys/ipc.h"
+#include "sys/msg.h"
+#include "Typedefs.h"
 
-void vSigHandler(int sig, siginfo_t *info, void *t)
-{
-	printf("Recv signal:%d\n",sig);
-	printf("Recv msg:%d\n",info->si_int);
-
-	return;
-}
+struct msgbuf{
+	long mtype;
+	char mtext[128];
+};
 
 int main(int argc, char *argv[])
 {
+	struct msgbuf sMsgBuf;
+	int qid;
+	key_t key;
 	int status;
-	pid_t pid;
+	bool bExit = FALSE;
 
-	struct sigaction act;
-	union sigval sig;
-	pid = getpid();
-
-	//Recv signal process
-//	act.sa_sigaction = vSigHandler;
-//	sigemptyset(&act.sa_mask);
-//	act.sa_flags = SA_SIGINFO;
-//	status = sigaction(SIGUSR1, &act, NULL);
-//	if( status < 0 )
-//	{
-//		perror("sigaction error");
-//		exit(1);
-//	}
-//	printf("Recv:\n");
-//	printf("PID:%d\n",pid);
-//	while(1);
-
-	//Send signal process,Select one of the compile-time
-	if( argc < 2 )
+	key = ftok("/tmp", 'b');
+	if(key < 0)
 	{
-		printf("paramter is less");
+		perror("ftok error");
 		exit(1);
 	}
-	pid = atoi(argv[1]);
-	sig.sival_int = getpid();
-	status = sigqueue(pid, SIGUSR1, sig);
-	if(status < 0)
+	qid = msgget(key, IPC_CREAT|0666);
+	if(qid < 0)
 	{
-		perror("sigqueue error");
+		perror("msgget error");
 		exit(1);
-	}else{
-		printf("Send Done\n");
 	}
-	
+
+#if 0
+	//Msg queue send process
+	while(1)
+	{
+		printf("Please Input the Message:");
+		fgets(sMsgBuf.mtext, sizeof(sMsgBuf.mtext),stdin);
+		if( 0 == strncmp(sMsgBuf.mtext, "exit", 4) )
+		{
+			bExit = TRUE;
+		}
+
+		sMsgBuf.mtype = 123;
+		status = msgsnd(qid, &sMsgBuf, 128, 0);
+		if( status < 0 )
+		{
+			perror("msgsnd error");
+			exit(1);
+		}
+		printf("Send Success!\n");
+
+		if(bExit)
+		{
+			break;
+		}
+	}
+
+#else
+	//msg queue recvice process
+	while(1)
+	{
+		memset(&sMsgBuf, 0, sizeof(sMsgBuf));
+		status = msgrcv(qid, &sMsgBuf, 128, 0, 0);
+		if(status < 0)
+		{
+			perror("sgrcv error");
+			exit(1);
+		}
+		printf("Recv msg:");
+		printf("Type=%d,Length=%d, Msg:%s\n", sMsgBuf.mtype, status, sMsgBuf.mtext);
+
+		if( 0 == strncmp(sMsgBuf.mtext, "exit", 4) )
+		{
+			break;
+		}
+	}
+
+#endif
+
 	return 0;
 }
 

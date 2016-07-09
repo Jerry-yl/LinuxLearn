@@ -13,6 +13,7 @@
 #define _TYPE_DEFS_H_
 
 #include "stdint.h"
+#include "rpc/types.h"
 
 #ifndef bool
 	typedef uint8_t bool;

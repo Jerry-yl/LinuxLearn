@@ -56,7 +56,11 @@ main.o: main.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/i386-linux-gnu/bits/ipctypes.h \
  /usr/include/i386-linux-gnu/bits/ipc.h \
  /usr/include/i386-linux-gnu/sys/msg.h \
- /usr/include/i386-linux-gnu/bits/msq.h Typedefs.h \
+ /usr/include/i386-linux-gnu/bits/msq.h \
+ /usr/include/i386-linux-gnu/sys/sem.h \
+ /usr/include/i386-linux-gnu/bits/sem.h \
+ /usr/include/i386-linux-gnu/sys/shm.h \
+ /usr/include/i386-linux-gnu/bits/shm.h Typedefs.h \
  /usr/lib/gcc/i686-linux-gnu/4.6/include/stdint.h /usr/include/stdint.h \
  /usr/include/i386-linux-gnu/bits/wchar.h /usr/include/rpc/types.h \
  /usr/include/i386-linux-gnu/sys/time.h \
@@ -234,6 +238,14 @@ main.o: main.c /usr/include/stdio.h /usr/include/features.h \
 /usr/include/i386-linux-gnu/sys/msg.h:
 
 /usr/include/i386-linux-gnu/bits/msq.h:
+
+/usr/include/i386-linux-gnu/sys/sem.h:
+
+/usr/include/i386-linux-gnu/bits/sem.h:
+
+/usr/include/i386-linux-gnu/sys/shm.h:
+
+/usr/include/i386-linux-gnu/bits/shm.h:
 
 Typedefs.h:
 

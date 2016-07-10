@@ -11,20 +11,24 @@
 #include "errno.h"
 #include "sys/ipc.h"
 #include "sys/msg.h"
+#include "sys/sem.h"
+#include "sys/shm.h"
 #include "Typedefs.h"
 
-struct msgbuf{
-	long mtype;
-	char mtext[128];
-};
+#define SHM_SIZE (1024)
 
 int main(int argc, char *argv[])
 {
-	struct msgbuf sMsgBuf;
-	int qid;
+	int shmid, semid;
 	key_t key;
-	int status;
+	int ret;
 	bool bExit = FALSE;
+	pid_t pid;
+	char *pshmAddr;
+	char acBuf[256];
+
+	struct sembuf sSemLock = {0, -1, SEM_UNDO};
+	struct sembuf sSemUnlock = {0, 1, SEM_UNDO|IPC_NOWAIT};
 
 	key = ftok("/tmp", 'b');
 	if(key < 0)
@@ -32,60 +36,144 @@ int main(int argc, char *argv[])
 		perror("ftok error");
 		exit(1);
 	}
-	qid = msgget(key, IPC_CREAT|0666);
-	if(qid < 0)
+	shmid = shmget(key, SHM_SIZE, IPC_CREAT|0666);
+	if(shmid < 0)
 	{
-		perror("msgget error");
+		perror("shmget error");
+		exit(1);
+	}
+	semid = semget(key, 1, IPC_CREAT |0666);
+	if( semid < 0 )
+	{
+		perror("semget error");
+
+		shmctl(shmid, IPC_RMID, 0);
+		exit(1);
+	}
+	ret = semctl(semid, 0, SETVAL, 1);
+	if(ret < 0)
+	{
+		perror("semctl error");
 		exit(1);
 	}
 
-#if 0
-	//Msg queue send process
-	while(1)
+	pid = fork();
+	if(pid < 0)
 	{
-		printf("Please Input the Message:");
-		fgets(sMsgBuf.mtext, sizeof(sMsgBuf.mtext),stdin);
-		if( 0 == strncmp(sMsgBuf.mtext, "exit", 4) )
+		perror("fork error");
+		exit(1);
+	}
+	if( 0 == pid )
+	{
+		pshmAddr = shmat(shmid, NULL, 0);
+		if( ((void *)(-1)) == pshmAddr )
 		{
-			bExit = TRUE;
-		}
-
-		sMsgBuf.mtype = 123;
-		status = msgsnd(qid, &sMsgBuf, 128, 0);
-		if( status < 0 )
-		{
-			perror("msgsnd error");
+			perror("shmat error");
 			exit(1);
 		}
-		printf("Send Success!\n");
-
-		if(bExit)
+		
+		while(1)
 		{
-			break;
+			ret = semop(semid, &sSemLock, 1);
+			if( ret < 0 )
+			{
+				perror("semop lock error");
+				exit(1);
+			}
+			printf("Please input msg:");
+			if(NULL == fgets(acBuf, 256, stdin))
+			{
+				perror("fgets error");
+				exit(1);
+			}
+
+			strcpy(pshmAddr, acBuf);
+
+			ret = semop(semid, &sSemUnlock, 1);
+			if( ret < 0 )
+			{
+				perror("semop unlock error");
+				exit(1);
+			}
+
+			if( 0 == strncmp(acBuf+1, "exit", 4) )
+			{
+				break;
+			}
 		}
-	}
 
-#else
-	//msg queue recvice process
-	while(1)
-	{
-		memset(&sMsgBuf, 0, sizeof(sMsgBuf));
-		status = msgrcv(qid, &sMsgBuf, 128, 0, 0);
-		if(status < 0)
+		ret = shmdt((void *)pshmAddr);
+		if( ret < 0 )
 		{
-			perror("sgrcv error");
+			perror("shmdt error");
 			exit(1);
 		}
-		printf("Recv msg:");
-		printf("Type=%d,Length=%d, Msg:%s\n", sMsgBuf.mtype, status, sMsgBuf.mtext);
 
-		if( 0 == strncmp(sMsgBuf.mtext, "exit", 4) )
+		printf("child process quit\n");
+		exit(0);
+	}else{
+		pshmAddr = shmat(shmid, NULL, 0);
+		if( ((void *)(-1)) == pshmAddr)
 		{
-			break;
+			perror("shmat error");
+			exit(1);
 		}
-	}
+		
+		while(1)
+		{
+			ret = semop(semid, &sSemLock, 1);
+			if( ret < 0 )
+			{
+				perror("father semop lock error");
+				exit(1);
+			}
+			if(0 == strncmp(pshmAddr, "b", 1) )
+			{
+				printf("Recv msg:%s\n", pshmAddr+1);
+				strcpy(acBuf, pshmAddr);
+				memset(pshmAddr, 0, SHM_SIZE);
+			}
+			ret = semop(semid, &sSemUnlock, 1);
+			if( ret < 0 )
+			{
+				perror("father semop unlock error");
+				exit(1);
+			}
+			if(0 == strncmp(acBuf+1, "exit", 4))
+			{
+				break;
+			}
+		}
 
-#endif
+		if(pid != wait(NULL))
+		{
+			perror("wait error");
+//			exit(1);
+		}
+
+		ret = shmdt((void *)pshmAddr);
+		if( ret < 0 )
+		{
+			perror("shmdt error");
+			exit(1);
+		}
+
+		ret = shmctl(shmid, IPC_RMID, 0);
+		if( ret < 0 )
+		{
+			perror("shmctl error");
+			exit(1);
+		}
+
+		ret = semctl(semid, IPC_RMID, 0);
+		if( ret < 0 )
+		{
+			perror("semctl error");
+			exit(1);
+		}
+
+		printf("father process quit\n");
+	}
 
 	return 0;
 }

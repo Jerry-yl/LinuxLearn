@@ -14,167 +14,60 @@
 #include "sys/sem.h"
 #include "sys/shm.h"
 #include "Typedefs.h"
+#include "pthread.h"
 
-#define SHM_SIZE (1024)
+void *pvMyThread(void *pv)
+{
+	int i;
+	int ret;
+	
+	ret = pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
+	if( ret != 0 )
+	{
+		perror("pthread_setcanceltype error");
+		exit(1);
+	}
+	
+	for(i=0;i<10;i++)
+	{
+		printf("----thread running.\n");
+		sleep(1);
+	}
+	
+
+	pthread_exit("Thank you for the cpu time.\n");
+	return pv;
+}
 
 int main(int argc, char *argv[])
 {
-	int shmid, semid;
-	key_t key;
+	pthread_t pthreadID;
 	int ret;
-	bool bExit = FALSE;
-	pid_t pid;
-	char *pshmAddr;
-	char acBuf[256];
-
-	struct sembuf sSemLock = {0, -1, SEM_UNDO};
-	struct sembuf sSemUnlock = {0, 1, SEM_UNDO|IPC_NOWAIT};
-
-	key = ftok("/tmp", 'b');
-	if(key < 0)
+	int i;
+	void *pthread_result = "I like you";
+	ret = pthread_create(&pthreadID, NULL, pvMyThread, NULL);
+	if( ret != 0 )
 	{
-		perror("ftok error");
-		exit(1);
-	}
-	shmid = shmget(key, SHM_SIZE, IPC_CREAT|0666);
-	if(shmid < 0)
-	{
-		perror("shmget error");
-		exit(1);
-	}
-	semid = semget(key, 1, IPC_CREAT |0666);
-	if( semid < 0 )
-	{
-		perror("semget error");
-
-		shmctl(shmid, IPC_RMID, 0);
-		exit(1);
-	}
-	ret = semctl(semid, 0, SETVAL, 1);
-	if(ret < 0)
-	{
-		perror("semctl error");
+		perror("++++pthread_create error");
 		exit(1);
 	}
 
-	pid = fork();
-	if(pid < 0)
+//	for(i=0;i<5;i++)
+//	{
+//		printf("Process running.\n");
+//		sleep(1);
+//	}
+	sleep(3);
+	ret = pthread_cancel(pthreadID);
+	if( ret != 0 )
 	{
-		perror("fork error");
+		perror("pthread_cancel error");
 		exit(1);
 	}
-	if( 0 == pid )
-	{
-		pshmAddr = shmat(shmid, NULL, 0);
-		if( ((void *)(-1)) == pshmAddr )
-		{
-			perror("shmat error");
-			exit(1);
-		}
-		
-		while(1)
-		{
-			ret = semop(semid, &sSemLock, 1);
-			if( ret < 0 )
-			{
-				perror("semop lock error");
-				exit(1);
-			}
-			printf("Please input msg:");
-			if(NULL == fgets(acBuf, 256, stdin))
-			{
-				perror("fgets error");
-				exit(1);
-			}
 
-			strcpy(pshmAddr, acBuf);
-
-			ret = semop(semid, &sSemUnlock, 1);
-			if( ret < 0 )
-			{
-				perror("semop unlock error");
-				exit(1);
-			}
-
-			if( 0 == strncmp(acBuf+1, "exit", 4) )
-			{
-				break;
-			}
-		}
-
-		ret = shmdt((void *)pshmAddr);
-		if( ret < 0 )
-		{
-			perror("shmdt error");
-			exit(1);
-		}
-
-		printf("child process quit\n");
-		exit(0);
-	}else{
-		pshmAddr = shmat(shmid, NULL, 0);
-		if( ((void *)(-1)) == pshmAddr)
-		{
-			perror("shmat error");
-			exit(1);
-		}
-		
-		while(1)
-		{
-			ret = semop(semid, &sSemLock, 1);
-			if( ret < 0 )
-			{
-				perror("father semop lock error");
-				exit(1);
-			}
-			if(0 == strncmp(pshmAddr, "b", 1) )
-			{
-				printf("Recv msg:%s\n", pshmAddr+1);
-				strcpy(acBuf, pshmAddr);
-				memset(pshmAddr, 0, SHM_SIZE);
-			}
-			ret = semop(semid, &sSemUnlock, 1);
-			if( ret < 0 )
-			{
-				perror("father semop unlock error");
-				exit(1);
-			}
-			if(0 == strncmp(acBuf+1, "exit", 4))
-			{
-				break;
-			}
-		}
-
-		if(pid != wait(NULL))
-		{
-			perror("wait error");
-//			exit(1);
-		}
-
-		ret = shmdt((void *)pshmAddr);
-		if( ret < 0 )
-		{
-			perror("shmdt error");
-			exit(1);
-		}
-
-		ret = shmctl(shmid, IPC_RMID, 0);
-		if( ret < 0 )
-		{
-			perror("shmctl error");
-			exit(1);
-		}
-
-		ret = semctl(semid, IPC_RMID, 0);
-		if( ret < 0 )
-		{
-			perror("semctl error");
-			exit(1);
-		}
-
-		printf("father process quit\n");
-	}
-
+	pthread_join(pthreadID, &pthread_result);
+	printf("Thread join,it returned:%s\n",(char *)pthread_result);
+	
 	return 0;
 }
 
